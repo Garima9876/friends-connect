@@ -4,9 +4,10 @@ import api from "../../axiosConfig"; // Import axios instance
 // Thunk for user registration
 export const register = createAsyncThunk(
   "auth/register",
-  async (userData, { rejectWithValue }) => {
+  async ({ userData, navigate }, { rejectWithValue }) => {
     try {
       const response = await api.post("/auth/register", userData); // API call for registration
+      navigate("/login"); // Navigate to the login page on successful registration
       return response.data; // Return user data and token
     } catch (error) {
       return rejectWithValue(error.response.data); // Handle error response
@@ -17,10 +18,11 @@ export const register = createAsyncThunk(
 // Thunk for user login
 export const login = createAsyncThunk(
   "auth/login",
-  async (userData, { rejectWithValue }) => {
+  async ({ userData, navigate }, { rejectWithValue }) => {
     try {
       const response = await api.post("/auth/login", userData); // API call for login
       localStorage.setItem("token", response.data.token); // Store token in localStorage
+      navigate("/friends"); // Navigate to the friends page on successful login
       return response.data; // Return user data and token
     } catch (error) {
       return rejectWithValue(error.response.data); // Handle error response
