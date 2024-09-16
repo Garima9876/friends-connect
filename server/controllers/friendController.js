@@ -1,5 +1,45 @@
 const User = require("../models/User");
 
+// User Search API
+const searchUsers = async (req, res) => {
+  const { query } = req.query;
+
+  try {
+    if (!query) {
+      return res.status(400).json({
+        success: false,
+        message: "Search query is required",
+      });
+    }
+
+    // Search users by userName or email
+    const users = await User.find({
+      $or: [
+        { userName: { $regex: query, $options: "i" } },
+        { email: { $regex: query, $options: "i" } },
+      ],
+    }).select("userName email");
+
+    if (users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No users found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      users,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};
+
 // Send Friend Request API
 const sendFriendRequest = async (req, res) => {
   const { userId, friendId } = req.body;
@@ -180,10 +220,44 @@ const removeFriend = async (req, res) => {
   }
 };
 
+// Recommended Users API
+const getRecommendedUsers = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const user = await User.findById(userId).populate("friends friendRequests");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Find users who are not friends or pending friend requests
+    const recommendedUsers = await User.find({
+      _id: { $nin: [...user.friends, ...user.friendRequests, userId] },
+    }).select("userName email");
+
+    res.status(200).json({
+      success: true,
+      recommendedUsers,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};
+
 module.exports = {
+  searchUsers,
   sendFriendRequest,
   acceptFriendRequest,
   declineFriendRequest,
   getFriendsList,
   removeFriend,
+  getRecommendedUsers,
 };
