@@ -1,16 +1,16 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import api from "../../axiosConfig"; // Import axios instance
+import api from "../../axiosConfig";
 
 // Thunk for user registration
 export const register = createAsyncThunk(
   "auth/register",
   async ({ userData, navigate }, { rejectWithValue }) => {
     try {
-      const response = await api.post("/auth/register", userData); // API call for registration
-      navigate("/login"); // Navigate to the login page on successful registration
-      return response.data; // Return user data and token
+      const response = await api.post("/auth/register", userData);
+      navigate("/login");
+      return response.data;
     } catch (error) {
-      return rejectWithValue(error.response.data); // Handle error response
+      return rejectWithValue(error.response.data);
     }
   }
 );
@@ -20,12 +20,13 @@ export const login = createAsyncThunk(
   "auth/login",
   async ({ userData, navigate }, { rejectWithValue }) => {
     try {
-      const response = await api.post("/auth/login", userData); // API call for login
-      localStorage.setItem("token", response.data.token); // Store token in localStorage
-      navigate("/friends"); // Navigate to the friends page on successful login
-      return response.data; // Return user data and token
+      const response = await api.post("/auth/login", userData);
+      localStorage.setItem("token", response.data.token);
+      localStorage.setItem("user", JSON.stringify(response.data.user));
+      navigate("/home");
+      return response.data;
     } catch (error) {
-      return rejectWithValue(error.response.data); // Handle error response
+      return rejectWithValue(error.response.data);
     }
   }
 );
@@ -34,8 +35,8 @@ export const login = createAsyncThunk(
 const authSlice = createSlice({
   name: "auth",
   initialState: {
-    user: null,
-    token: null,
+    user: JSON.parse(localStorage.getItem("user")) || null,
+    token: localStorage.getItem("token") || null,
     status: "idle",
     error: null,
   },
@@ -43,7 +44,13 @@ const authSlice = createSlice({
     logout: (state) => {
       state.user = null;
       state.token = null;
-      localStorage.removeItem("token"); // Remove token on logout
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+    },
+    setUserFromStorage: (state) => {
+      // Load user and token from localStorage into state
+      state.user = JSON.parse(localStorage.getItem("user")) || null;
+      state.token = localStorage.getItem("token") || null;
     },
   },
   extraReducers: (builder) => {
@@ -65,6 +72,6 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout } = authSlice.actions;
+export const { logout, setUserFromStorage } = authSlice.actions;
 
 export default authSlice.reducer;
