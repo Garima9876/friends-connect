@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchFriends,
@@ -6,37 +6,81 @@ import {
   fetchRecommendedUsers,
   sendFriendRequest,
 } from "../store/friends/friendsSlice";
+import { fetchUserDetails } from "../store/auth/authSlice";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 const Home = () => {
   const dispatch = useDispatch();
-  const { searchResults, recommendedUsers, friends, friendRequests } = useSelector(
+  const { searchResults, recommendedUsers } = useSelector(
     (state) => state.friends
   );
   const { user } = useSelector((state) => state.auth);
+  const { friends } = useSelector((state) => state.friends);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sentFriendRequests, setSentFriendRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
-      dispatch(fetchFriends(user.id));
-      dispatch(fetchRecommendedUsers(user.id)); // Fetch recommended users on component mount
-    }
-  }, [user, dispatch]);
+    const fetchData = async () => {
+      if (user?.id) {
+        setLoading(true);
+
+        // Fetch user details and process sentFriendRequests
+        const result = await dispatch(fetchUserDetails(user.id));
+        if (fetchUserDetails.fulfilled.match(result)) {
+          setSentFriendRequests(
+            result.payload.sentFriendRequests.map((req) => req._id)
+          );
+        }
+
+        // Fetch friends and recommended users
+        dispatch(fetchFriends(user.id));
+        dispatch(fetchRecommendedUsers(user.id));
+
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user?.id, dispatch]);
 
   const handleSearch = (e) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      dispatch(searchUsers(searchQuery));
+    if (searchQuery.trim() && user?.id) {
+      dispatch(searchUsers({ query: searchQuery, userId: user.id }));
     }
   };
 
-  const handleSendRequest = (friendEmail) => {
-    dispatch(sendFriendRequest(friendEmail));
+  const handleSendRequest = async (friendId) => {
+    try {
+      await dispatch(sendFriendRequest({ userId: user.id, friendId }));
+
+      // Refresh sentFriendRequests and lists
+      const result = await dispatch(fetchUserDetails(user.id));
+      if (fetchUserDetails.fulfilled.match(result)) {
+        setSentFriendRequests(
+          result.payload.sentFriendRequests.map((req) => req._id)
+        );
+      }
+      // Refresh friends and recommended users
+      dispatch(fetchFriends(user.id));
+      dispatch(fetchRecommendedUsers(user.id));
+    } catch (error) {
+      console.error("Failed to send friend request:", error);
+    }
   };
 
-  const hasSentRequest = (email) => {
-    return friendRequests.some(request => request.email === email);
+  const hasSentRequest = (friendId) => {
+    return sentFriendRequests.includes(friendId);
   };
+
+  const isFriend = (userId) => {
+    return friends.friends.some((friend) => friend._id === userId);
+  };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="container mt-5">
@@ -71,24 +115,29 @@ const Home = () => {
               <div className="mt-3">
                 <h5>Search Results:</h5>
                 <ul className="list-group">
-                  {searchResults.map((user) => (
+                  {searchResults.map((resultUser, index) => (
                     <li
                       className="list-group-item d-flex justify-content-between align-items-center"
-                      key={user._id}
+                      key={resultUser.id || index}
                     >
                       <span>
-                        {user.userName} ({user.email})
+                        {resultUser.userName} ({resultUser.email})
                       </span>
                       <button
                         className={`btn btn-sm ${
-                          hasSentRequest(user.email)
+                          hasSentRequest(resultUser._id) ||
+                          isFriend(resultUser._id)
                             ? "btn-secondary"
                             : "btn-success"
                         }`}
-                        disabled={hasSentRequest(user.email)}
-                        onClick={() => handleSendRequest(user.email)}
+                        disabled={
+                          hasSentRequest(resultUser._id) ||
+                          isFriend(resultUser._id)
+                        }
+                        onClick={() => handleSendRequest(resultUser._id)}
                       >
-                        {hasSentRequest(user.email)
+                        {hasSentRequest(resultUser._id) ||
+                        isFriend(resultUser._id)
                           ? "Already Sent"
                           : "Send Request"}
                       </button>
@@ -108,24 +157,29 @@ const Home = () => {
               <div className="card-body">
                 {recommendedUsers.length > 0 ? (
                   <ul className="list-group">
-                    {recommendedUsers.map((user) => (
+                    {recommendedUsers.map((recommendedUser, index) => (
                       <li
                         className="list-group-item d-flex justify-content-between align-items-center"
-                        key={user._id}
+                        key={recommendedUser.id || index}
                       >
                         <span>
-                          {user.userName} ({user.email})
+                          {recommendedUser.userName} ({recommendedUser.email})
                         </span>
                         <button
                           className={`btn btn-sm ${
-                            hasSentRequest(user.email)
+                            hasSentRequest(recommendedUser._id) ||
+                            isFriend(recommendedUser._id)
                               ? "btn-secondary"
                               : "btn-success"
                           }`}
-                          disabled={hasSentRequest(user.email)}
-                          onClick={() => handleSendRequest(user.email)}
+                          disabled={
+                            hasSentRequest(recommendedUser._id) ||
+                            isFriend(recommendedUser._id)
+                          }
+                          onClick={() => handleSendRequest(recommendedUser._id)}
                         >
-                          {hasSentRequest(user.email)
+                          {hasSentRequest(recommendedUser._id) ||
+                          isFriend(recommendedUser._id)
                             ? "Already Sent"
                             : "Send Request"}
                         </button>
