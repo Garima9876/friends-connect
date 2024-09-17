@@ -19,7 +19,6 @@ function App() {
 
   return (
     <Router>
-      <Navbar />
       <Routes>
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/login" element={<Login />} />
@@ -28,6 +27,7 @@ function App() {
           path="/home"
           element={
             <PrivateRoute>
+              <Navbar />
               <Home />
             </PrivateRoute>
           }
@@ -36,6 +36,7 @@ function App() {
           path="/my-friends"
           element={
             <PrivateRoute>
+              <Navbar />
               <FriendsList />
             </PrivateRoute>
           }
@@ -44,6 +45,7 @@ function App() {
           path="/friend-requests"
           element={
             <PrivateRoute>
+              <Navbar />
               <FriendRequests />
             </PrivateRoute>
           }
