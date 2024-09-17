@@ -1,8 +1,18 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { logout } from "../store/auth/authSlice";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 const Navbar = () => {
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate("/login");
+  };
+
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
       <div className="container">
@@ -10,7 +20,7 @@ const Navbar = () => {
           Friends Connect
         </Link>
         <button
-          className="navbar-toggler"
+          className="navbar-toggler ml-auto"
           type="button"
           data-bs-toggle="collapse" // Update this line to "data-bs-toggle"
           data-bs-target="#navbarNav" // Update this line to "data-bs-target"
@@ -33,6 +43,11 @@ const Navbar = () => {
               </Link>
             </li>
           </ul>
+        </div>
+        <div className="ml-4">
+          <button className="btn btn-danger" onClick={handleLogout}>
+            Logout
+          </button>
         </div>
       </div>
     </nav>

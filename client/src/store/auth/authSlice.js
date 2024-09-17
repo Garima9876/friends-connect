@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../axiosConfig";
+import { toast } from "react-toastify";
 
 // Thunk for user registration
 export const register = createAsyncThunk(
@@ -31,6 +32,19 @@ export const login = createAsyncThunk(
   }
 );
 
+// Thunk for fetching user details
+export const fetchUserDetails = createAsyncThunk(
+  "auth/fetchUserDetails",
+  async (userId, { rejectWithValue }) => {
+    try {
+      const response = await api.get(`/auth/user/${userId}`);
+      return response.data.user;
+    } catch (error) {
+      return rejectWithValue(error.response.data);
+    }
+  }
+);
+
 // Slice for authentication state management
 const authSlice = createSlice({
   name: "auth",
@@ -48,7 +62,6 @@ const authSlice = createSlice({
       localStorage.removeItem("user");
     },
     setUserFromStorage: (state) => {
-      // Load user and token from localStorage into state
       state.user = JSON.parse(localStorage.getItem("user")) || null;
       state.token = localStorage.getItem("token") || null;
     },
@@ -58,16 +71,35 @@ const authSlice = createSlice({
       .addCase(register.fulfilled, (state, action) => {
         state.user = action.payload.user;
         state.token = action.payload.token;
+        toast.success("Registration successful!");
       })
       .addCase(login.fulfilled, (state, action) => {
         state.user = action.payload.user;
         state.token = action.payload.token;
+        toast.success("Login successful!");
+      })
+      .addCase(fetchUserDetails.fulfilled, (state, action) => {
+        state.user = action.payload;
       })
       .addCase(register.rejected, (state, action) => {
-        state.error = action.payload.message;
+        state.error = action.payload?.message || "An unexpected error occurred";
+        toast.error(
+          action.payload?.message || "Failed to register. Please try again."
+        );
       })
       .addCase(login.rejected, (state, action) => {
-        state.error = action.payload.message;
+        state.error = action.payload?.message || "An unexpected error occurred";
+        toast.error(
+          action.payload?.message ||
+            "Failed to login. Please check your credentials."
+        );
+      })
+      .addCase(fetchUserDetails.rejected, (state, action) => {
+        state.error = action.payload?.message || "An unexpected error occurred";
+        toast.error(
+          action.payload?.message ||
+            "Failed to fetch user details. Please try again."
+        );
       });
   },
 });
